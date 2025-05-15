@@ -3,7 +3,6 @@
 #include "fb.h"
 #include "menu.h"
 #include "minilibc.h"
-#include "config.h"
 #include "ipodhw.h"
 #include "lockicon.h"
 
@@ -12,7 +11,6 @@ static struct {
   int    numItems;
   char   *string[MAX_MENU_ITEMS];
   int    x,y,w,h,fh;
-  config_t *conf;
 } menu;
 
 /* Clears the screen to a nice black to blue gradient */
@@ -20,13 +18,11 @@ void menu_cls(uint16 *fb) {
   int x,y;
   if (menu.ipod->lcd_is_grayscale) {
     fb_cls (fb, 0);
-  } else if (!menu.conf->usegradient) {
-    fb_cls (fb, menu.conf->bgcolor);
   } else {
     int h = menu.ipod->lcd_height;
     int w = menu.ipod->lcd_width;
     uint8 r, g, b;
-    fb_rgbsplit (menu.conf->bgcolor, &r, &g, &b);
+    fb_rgbsplit (BLACK, &r, &g, &b);
     for (y=menu.ipod->lcd_height-1; y >= 0; y--) {
       uint16 pix = fb_rgb ((int)r*y/h, (int)g*y/h, (int)b*y/h);
       int ofs = y * w;
@@ -127,7 +123,6 @@ static void menu_recenter() {
 
 void menu_init() {
   menu.ipod = ipod_get_hwinfo();
-  menu.conf = config_get ();
   menu.numItems = 0;
 }
 
@@ -156,7 +151,7 @@ void menu_drawprogress(uint16 *fb,uint8 completed) {
                  BLACK );
   menu_drawrect( fb,10,(menu.ipod->lcd_height>>1)-5,
                  10+(completed*pbarWidth)/255,(menu.ipod->lcd_height>>1)+5,
-                 (menu.ipod->lcd_is_grayscale? WHITE : menu.conf->hicolor) );
+                 (menu.ipod->lcd_is_grayscale? WHITE : WHITE) );
 
   console_putsXY(1,1,tmpBuff);
   fb_update(fb);
@@ -190,7 +185,7 @@ void menu_redraw(uint16 *fb, int selectedItem, char *title, char *countDown, int
         bg = WHITE;
         console_setcolor (BLACK, bg, 0);
       } else {
-        bg = menu.conf->hicolor;
+        bg = WHITE;
         console_setcolor(WHITE, bg, 0);
       }
       menu_drawrect(fb, menu.x, menu.y+i*line_height, menu.x+menu.w-1, menu.y+(i+1)*line_height-1, bg);

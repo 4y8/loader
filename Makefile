@@ -29,6 +29,7 @@ $(info    VERSION is $(VERSION))
 
 CROSS    ?= arm-none-eabi-
 CC        = $(CROSS)gcc
+CPP       = $(CROSS)g++
 LD        = $(CROSS)ld
 MYCFLAGS  = -O1 -Wall -std=gnu99 -ffreestanding -nostdinc -fomit-frame-pointer -DVERSION=\"$(VERSION)\" -fno-exceptions
 # -DDEBUG
@@ -36,7 +37,7 @@ MYCPPFLAGS= -O1 -Wall -nostdinc -fomit-frame-pointer -fno-exceptions
 MYLDFLAGS = -Tarm_elf_40.x `$(CC) -print-libgcc-file-name`
 OBJCOPY   = $(CROSS)objcopy
 
-OBJFILES = startup.o loader.o fb.o ipodhw.o console.o minilibc.o ata2.o vfs.o fat32.o ext2.o fwfs.o keypad.o menu.o config.o macpartitions.o interrupts.o interrupt-entry.o
+OBJFILES = startup.o loader.o fb.o ipodhw.o console.o minilibc.o ata2.o vfs.o fat32.o fwfs.o menu.o keypad.o macpartitions.o interrupts.o interrupt-entry.o ../a3gunix/vm.o ../alloco/alloco.o
 
 debug: MYCFLAGS += -DDEBUG
 debug: all
@@ -59,7 +60,7 @@ loader.elf: $(OBJFILES)
 
 %.o:%.cc
 	@echo "Compiling $<"
-	@$(CC) $(MYCPPFLAGS) $(CFLAGS) -c $< -o $@
+	@$(CPP) $(MYCPPFLAGS) $(CFLAGS) -c $< -o $@
 
 %.o:%.c
 	@echo "Compiling $<"

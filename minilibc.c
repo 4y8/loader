@@ -46,15 +46,8 @@ mod:	N	near ptr				DONE
 	L	long long (64-bit) int			no
 *****************************************************************************/
 
-#if ONPC
-	// for debugging on Mac OS or Windows or Linux or whatever
-	#include <stdlib.h>
-	#include <stdio.h>
-#else
-	#include "console.h"
-	#include "ipodhw.h"
-#endif
-
+#include "console.h"
+#include "ipodhw.h"
 #include "fb.h"
 #include "ipodhw.h"
 #include "minilibc.h"
@@ -393,7 +386,7 @@ int mlc_printf(const char *fmt, ...) {
 *****************************************************************************/
 #endif
 
-static uint32 malloc_top;
+uint32 malloc_top;
 
 void mlc_malloc_init(void) {
   #if !ONPC

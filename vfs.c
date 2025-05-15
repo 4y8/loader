@@ -1,7 +1,6 @@
 #include "bootloader.h"
 #include "ata2.h"
 #include "fat32.h"
-#include "ext2.h"
 #include "fwfs.h"
 #include "vfs.h"
 #include "minilibc.h"
@@ -47,10 +46,6 @@ int vfs_open(char *fname) {
           !mlc_strncmp(fname,"[win]",5) || !mlc_strncmp(fname,"[vfat]",6) ||
           !mlc_strncmp(fname,"[fat32]",7) ){
           part = vfs_find_part(FAT32);
-      }
-      if( !mlc_strncmp(fname,"[ext]",5) || !mlc_strncmp(fname,"[ext2]",6) ||
-          !mlc_strncmp(fname,"[linux]",7) ){
-          part = vfs_find_part(EXT2);
       }
       if( !mlc_strncmp(fname,"[hfs]",5) || !mlc_strncmp(fname,"[hfs+]",6) ||
           (part == -1 && !mlc_strncmp(fname,"[linux]",7)) ){
@@ -215,32 +210,6 @@ void vfs_init( void) {
           }
           else {
             mlc_printf("[%d]: Empty\n", i);
-          }
-
-          break;
-        case 0x83:
-          /* EXT2 partition */
-          ata_readblocks(fs_header, offset + 2, 1);
-          if(fs_header->ext2magic == 0xEF53) {
-            offset = offset;
-            validoffset = 1;
-          }
-          else if(logBlkMultiplier > 1) {
-            ata_readblocks(fs_header, offset*logBlkMultiplier + 2, 1);
-            if(fs_header->ext2magic == 0xEF53) {
-              offset = offset*logBlkMultiplier;
-              validoffset = 1;
-            }
-          }
-
-          if(validoffset) {
-            foundpartcount++;
-            mlc_printf("[%d]: EXT2\n", i);
-            ext2_newfs(i, offset);
-          }
-          else {
-            mlc_printf("[%d]: Bad EXT2 entry\n", i);
-            mlc_show_critical_error();
           }
 
           break;

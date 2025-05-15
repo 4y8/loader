@@ -21,6 +21,10 @@
 #include "fat32.h"
 #include "minilibc.h"
 
+#include "../libc/u.h"
+#include "../a3gunix/vm.h"
+#include "../alloco/alloco.h"
+
 #define MAX_HANDLES 10
 
 static filesystem myfs;
@@ -415,7 +419,106 @@ static fat32_file *fat32_findfile(uint32 startCluster, int isRoot, char *fname)
   return 0; // end of dir
 }
 
-static int fat32_open(void *fsdata,char *fname) {
+static int
+fat32_finddir(uint32 startCluster, int isRoot, char *fname, fat32_file *fileptr)
+{
+	uint32 flength, cluster;
+	uint8  ftype;
+	char *shortname, *longname;
+	dir_state dstate = {isRoot, 0, startCluster, 0};
+	char *next = mlc_strchr(fname, '/');
+
+	while (getNextCompleteEntry (&dstate, &shortname, &longname, &cluster,
+	                             &flength, &ftype)) {
+		if (ftype & 0x10) {
+			if (mlc_strcasecmp(longname, fname) == 0) {
+				fileptr->cluster  = cluster;
+				fileptr->opened   = 1;
+				fileptr->position = 0;
+				fileptr->length = 0;
+				return 0;
+			}
+			int len = next-fname;
+			if (next && 
+			    mlc_strncasecmp(longname, fname, len) == 0 &&
+			    longname[len] == '\0')
+				return fat32_finddir(cluster, 0, next + 1, fileptr);
+		}
+	}
+	return -1;
+}
+
+int
+new_fd(struct vm *vm)
+{
+	for (int i = 0; i < NFILES_MAX; ++i)
+		if (vm->files[i] == 0)
+			return i;
+
+	return -1;
+}
+
+int
+fat32_open_dir(char *fname, struct vm *vm)
+{
+	fat32_file *fptr;
+	int fd;
+
+	if (fname[0] != '/') {
+		return -1;
+	}
+	fname += 1;
+	fptr = (void *)malloc(sizeof(fat32_file));
+	if (fname[0] == '\0') {
+		fptr->cluster = fat.root_dir_first_cluster;
+		fptr->opened = 1;
+	} else {
+		fat32_finddir(fat.root_dir_first_cluster, 1, fname, fptr);
+	}
+
+	fd = new_fd(vm);
+	vm->files[fd] = fptr;
+
+	return fd;
+}
+
+void
+fat32_close_dir(int fd, struct vm *vm)
+{
+	free((u32)vm->files[fd]);
+	vm->files[fd] = 0;
+}
+
+int
+fat32_next_entry_dir(int fd, i32 *name, struct vm *vm)
+{
+	char *lname_out, *sname_out;
+	dir_state dstate;
+	u32 cluster, flength;
+	u8 ftype;
+	int i;
+
+
+	dstate.cluster = ((fat32_file *)(vm->files[fd]))->cluster;
+	dstate.entryIdx = ((fat32_file *)(vm->files[fd]))->position;
+	dstate.isRoot = dstate.cluster == fat.root_dir_first_cluster;
+	dstate.buffer = 0;
+
+	do {
+		if (!getNextCompleteEntry(&dstate, &sname_out, &lname_out,	
+	                                  &cluster, &flength, &ftype)) {
+			return -1;
+		}
+	} while (sname_out[0] == 0 || lname_out[0] == 0 || ((ftype & 0x1F) != 0 && !(ftype & 0x10)));
+
+	for (i = 0; lname_out[i] != '\0'; ++i)
+		name[i] = lname_out[i];
+
+	((fat32_file *)(vm->files[fd]))->position = dstate.entryIdx;
+	return i;
+}
+
+static int fat32_open(void *fsdata, char *fname) {
   fat_t      *fs;
   fat32_file *file;
 
