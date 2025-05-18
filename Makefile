@@ -43,8 +43,6 @@ debug: MYCFLAGS += -DDEBUG
 debug: all
 
 all: loader.bin $(OBJFILES) Makefile
-#	@echo "Building firmware image"
-#	@./make_fw -g 4g -o my_sw.bin -i apple_os.bin $<
 
 clean:
 	@echo "Cleaning up"
